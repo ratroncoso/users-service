@@ -143,7 +143,7 @@ RESPONSE JSON ESPERADA
 }
 ```
 
-## Consulta Listado de Usuarios
+### Consulta Listado de Usuarios
 El listado de usuario se obtiene haciendo una petición a un endpoint securitizado
 Debemos completar el request con el Token JWT del Login
 
