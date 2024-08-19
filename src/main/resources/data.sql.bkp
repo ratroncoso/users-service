@@ -1,2 +1,5 @@
-INSERT INTO USER (id, name, password, created
-    VALUES ()
+
+insert into usuario (id,name,email,password,active,created,last_login,modified,role)
+        values ('adcde2a8-e887-426c-83a5-e98536395923','John Travolta','jtravolta@email.com','$2a$10$Wh2VLoGU.c9yrGCxXT7GKOvi7jqwWufF51rZGiO0ZPIfawo8qwmHW',true,now(),now(),null,1)
+insert into phone (id,citycode,countrycode,number,user_id)
+        values ('b2106ea9-e856-4f86-a92c-0ef143f11539','11111','111','1111','adcde2a8-e887-426c-83a5-e98536395923')

@@ -1,4 +1,4 @@
-package cl.rtroncoso.users_service.model.entities;
+package cl.rtroncoso.users_service.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -17,15 +17,15 @@ public class Phone {
     @GeneratedValue(generator = "uuid-hibernate-generator")
     @GenericGenerator(name = "uuid-hibernate-generator", strategy = "org.hibernate.id.UUIDGenerator")
     private UUID id;
-
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    @Getter (AccessLevel.NONE)
-    private User user;
     @NotNull
     private String number;
     @NotNull
     private String citycode;
     @NotNull
     private String countrycode;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    @Getter (AccessLevel.NONE)
+    private User user;
 }

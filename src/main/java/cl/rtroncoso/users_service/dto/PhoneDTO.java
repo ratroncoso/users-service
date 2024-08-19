@@ -1,11 +1,17 @@
-package cl.rtroncoso.users_service.model.dto;
+package cl.rtroncoso.users_service.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class PhoneDTO {
 
     @NotEmpty(message = "El numero es requerido.")

@@ -1,14 +1,21 @@
-package cl.rtroncoso.users_service.model.dto;
+package cl.rtroncoso.users_service.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import cl.rtroncoso.users_service.utils.Constants;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class RegisterUserDTO {
 
     @NotEmpty(message = "El nombre es requerido.")

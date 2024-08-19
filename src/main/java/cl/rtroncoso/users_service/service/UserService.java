@@ -1,14 +1,17 @@
 package cl.rtroncoso.users_service.service;
 
+import cl.rtroncoso.users_service.dto.*;
+import cl.rtroncoso.users_service.entity.*;
+import cl.rtroncoso.users_service.exception.EmailDuplicatedException;
 import cl.rtroncoso.users_service.exception.UserNotFoundException;
-import cl.rtroncoso.users_service.model.dto.PhoneDTO;
-import cl.rtroncoso.users_service.model.dto.RegisterUserDTO;
-import cl.rtroncoso.users_service.model.entities.Phone;
-import cl.rtroncoso.users_service.model.entities.User;
-import cl.rtroncoso.users_service.repository.PhoneRepo;
+import cl.rtroncoso.users_service.repository.TokenRepo;
 import cl.rtroncoso.users_service.repository.UserRepo;
+import cl.rtroncoso.users_service.security.JWTService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,7 +25,15 @@ public class UserService {
     @Autowired
     private UserRepo userRepo;
     @Autowired
-    private PhoneRepo phoneRepo;
+    private TokenRepo tokenRepo;
+
+    @Autowired
+    private JWTService jwtService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     public List<User> findAllUsers(){
         return userRepo.findAll();
@@ -36,15 +47,17 @@ public class UserService {
     }
 
     public User registerNewUser (RegisterUserDTO dto) {
+        userRepo.findByEmail(dto.getEmail())
+                .ifPresent(e -> { throw new EmailDuplicatedException("El correo ya se encuentra registrado.", HttpStatus.CONFLICT.value()); });
 
         User user = new User();
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
-        user.setPassword(dto.getPassword());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setCreated(LocalDateTime.now());
-        //user.setToken(jwtUtils.generateJwtToken(user.getEmail()));
         user.setLast_login(LocalDateTime.now());
         user.setActive(Boolean.TRUE);
+        user.setRole(Role.USER);
 
         List<Phone> phoneList = new ArrayList<Phone>();
         for(PhoneDTO phoneDTO : dto.getPhones()) {
@@ -57,24 +70,55 @@ public class UserService {
         }
         user.setPhones(phoneList);
 
-        return userRepo.save(user);
+        User savedUser = userRepo.save(user);
+        String jwtToken = jwtService.generateToken(savedUser);
+        saveUserToken(savedUser, jwtToken);
+        return savedUser;
     }
 
-    public String validateLogin(String email, String password) {
-        User userLogin = new User();
-        userLogin.setEmail(email);
-        userLogin.setPassword(password);
-        Example<User> criteria = Example.of(userLogin);
-        Optional<User> userOptional = userRepo.findOne(criteria);
-        if(userOptional.isEmpty()){
-            throw new UserNotFoundException("Usuario no encontrado");
-        }
+    public AuthenticationResponse authenticate(AutheticationRequest request) {
+        User user = userRepo.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
-        User user = userOptional.get();
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+
         user.setLast_login(LocalDateTime.now());
-        //user.setToken(jwtUtils.generateJwtToken(user.getEmail()));
         userRepo.save(user);
 
-        return user.getToken();
+        return AuthenticationResponse
+                .builder()
+                .token(jwtService.generateToken(user))
+                .build();
+    }
+
+    public void logout(UserDTO userDTO) {
+        revokeAllUserTokens(userRepo.findById(UUID.fromString(userDTO.getId())).orElseThrow());
+    }
+
+    private void saveUserToken(User user, String jwtToken) {
+        Token token = Token.builder()
+                .user(user)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .expired(false)
+                .revoked(false)
+                .build();
+        user.setTokens(List.of(token));
+    }
+
+    private void revokeAllUserTokens(User user) {
+        List<Token> validUserTokens = tokenRepo.findAllValidTokenByUser(String.valueOf(user.getId()));
+        if (validUserTokens.isEmpty())
+            return;
+        validUserTokens.forEach(token -> {
+            token.setExpired(true);
+            token.setRevoked(true);
+        });
+        tokenRepo.saveAll(validUserTokens);
     }
 }
